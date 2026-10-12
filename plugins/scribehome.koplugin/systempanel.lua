@@ -29,7 +29,7 @@ local function firstLine(path)
     return line
 end
 
--- SSID and IPv4 address of the Wi-Fi interface (nil when down or unassociated).
+-- SSID and IPv4 address of an interface (nil when down or unassociated).
 local function wifiAddress(ifname)
     local ok, NetInfo = pcall(require, "ffi/netinfo")
     if not ok then return end
@@ -53,15 +53,22 @@ end
 function SystemPanel.rows()
     local NetworkMgr = require("ui/network/manager")
     local ssid, ip = wifiAddress(NetworkMgr:getNetworkInterfaceName() or "wlan0")
+    -- jav-tailscale names this node "scribe" on the tailnet; prefer it, it works from anywhere.
+    local tailnet_ssid, tailnet_ip = wifiAddress("tailscale0") -- luacheck: no unused
+    local ssh = tailnet_ip and "ssh root@scribe" or (ip and ("ssh root@" .. ip))
+    -- Amazon leaves an unfilled "(~~otaVersion~~)" placeholder in prettyversion.txt.
+    local firmware = firstLine("/etc/prettyversion.txt")
+    firmware = firmware and firmware:gsub("%s*%(~~otaVersion~~%)", "")
     local disk = util.diskUsage("/mnt/us")
     return {
         { label = _("Wi-Fi"), toggle = NetworkMgr:isWifiOn() and true or false },
         { label = _("Network"), value = ssid or _("Not connected") },
         { label = _("IP"), value = ip or _("No address") },
-        { label = _("SSH"), value = ip and ("ssh root@" .. ip) or _("No address") },
+        { label = _("Tailnet"), value = tailnet_ip or _("Not connected") },
+        { label = _("SSH"), value = ssh or _("No address") },
         { label = _("Battery"), value = string.format("%d%%", Device:getPowerDevice():getCapacity()) },
         { label = _("Storage"), value = disk.available and T(_("%1 free on /mnt/us"), util.getFriendlySize(disk.available)) or _("/mnt/us unavailable") },
-        { label = _("Firmware"), value = firstLine("/etc/prettyversion.txt") or _("Unknown") },
+        { label = _("Firmware"), value = firmware or _("Unknown") },
         { label = _("Build"), value = Version:getCurrentRevision() or _("Unknown") },
     }
 end
