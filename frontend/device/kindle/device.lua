@@ -855,6 +855,18 @@ function Kindle:readyToSuspend(delay)
 end
 
 function Kindle:isStartupScriptUpToDate()
+    -- Only relevant if we were actually started by our startup script, which re-execs itself from /var/tmp:
+    -- that's not the case if we were started by a custom launcher (and /var/tmp/koreader.sh may then be missing or stale).
+    local fd = io.open(string.format("/proc/%d/cmdline", C.getppid()), "rb")
+    if not fd then
+        return true
+    end
+    local parent_cmdline = fd:read("*all")
+    fd:close()
+    if not parent_cmdline or not parent_cmdline:find("/var/tmp/koreader.sh", 1, true) then
+        return true
+    end
+
     local md5 = require("ffi/MD5")
     -- Compare the hash of the *active* script to the *potential* one.
     return md5.sumFile("/var/tmp/koreader.sh") == md5.sumFile("koreader.sh")
