@@ -179,8 +179,14 @@ end
 
 function KindlePowerD:getCapacityHW()
     if self.lipc_handle ~= nil then
-        return self.lipc_handle:get_int_property("com.lab126.powerd", "battLevel")
-    elseif self.batt_capacity_file then
+        -- NOTE: This returns nil if the query fails (e.g., powerd is busy or unresponsive),
+        --       in which case we fall back to the sysfs read below, as callers expect a number.
+        local capacity = self.lipc_handle:get_int_property("com.lab126.powerd", "battLevel")
+        if capacity then
+            return capacity
+        end
+    end
+    if self.batt_capacity_file then
         return self:read_int_file(self.batt_capacity_file)
     else
         local std_out = io.popen("gasgauge-info -c 2>/dev/null", "r")
