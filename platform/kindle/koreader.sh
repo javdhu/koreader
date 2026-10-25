@@ -311,7 +311,11 @@ if [ "${STOP_FRAMEWORK}" = "no" ] && [ "${INIT_TYPE}" = "sysv" ]; then
 fi
 
 # SIGSTOP volumd, to inhibit USBMS (sysv & upstart)
-if [ -e "/etc/init.d/volumd" ] || [ -e "/etc/upstart/volumd.conf" ]; then
+# NOTE: Devices that export the userstore over MTP don't do USBMS at all,
+#       and stopping volumd there would hang the USB connection entirely.
+if [ -e "/etc/upstart/mtp.conf" ] || [ -e "/dev/usb-ffs/mtp" ]; then
+    logmsg "MTP device, leaving volumd alone"
+elif [ -e "/etc/init.d/volumd" ] || [ -e "/etc/upstart/volumd.conf" ]; then
     logmsg "Stopping volumd . . ."
     killall -STOP volumd
     VOLUMD_STOPPED="yes"
