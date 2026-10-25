@@ -341,8 +341,11 @@ local function isSpecialOffers()
     local is_so
     local loaded_blanket_modules = lipc_handle:get_string_property("com.lab126.blanket", "load")
     if not loaded_blanket_modules then
-        logger.warn("could not get lipc property")
-        return true
+        -- NOTE: Meaning blanket isn't running (e.g., the framework was never started),
+        --       so nothing but us will draw a screensaver.
+        logger.warn("could not get lipc property, assuming blanket is not running")
+        lipc_handle:close()
+        return false
     end
     if string.find(loaded_blanket_modules, "ad_screensaver") then
         is_so = true
